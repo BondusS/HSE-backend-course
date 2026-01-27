@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 
 class Item(BaseModel):
     seller_id: int = Field(..., gt=0, description="ID продавца, должен быть > 0")
@@ -8,3 +8,7 @@ class Item(BaseModel):
     description: str = Field(..., max_length=1000, description="Описание товара")
     category: int = Field(..., gt=0, description="Категория товара")
     images_qty: int = Field(..., ge=0, description="Количество изображений, должно быть >= 0")
+
+class PredictionResponse(BaseModel):
+    is_violation: bool
+    probability: float
