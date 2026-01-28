@@ -6,3 +6,4 @@ numpy
 pytest
 httpx
 mlflow
+sqlalchemy
