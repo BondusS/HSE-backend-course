@@ -1,5 +1,5 @@
 import numpy as np
-from schemas import Item
+from models.schemas import Item
 
 
 class PredictionService:
@@ -10,18 +10,10 @@ class PredictionService:
         if self.model is None:
             raise RuntimeError("Model is not loaded")
 
-        # Преобразование признаков согласно ТЗ
-
-        # 1. is_verified_seller -> 1.0 или 0.0
+        # Преобразование признаков
         feat_verified = 1.0 if item.is_verified_seller else 0.0
-
-        # 2. images_qty -> деление на 10
         feat_images = item.images_qty / 10.0
-
-        # 3. len(description) -> деление на 1000
         feat_desc_len = len(item.description) / 1000.0
-
-        # 4. category -> деление на 100
         feat_category = item.category / 100.0
 
         # Формируем вектор признаков (порядок важен и должен совпадать с обучением в model.py)
