@@ -30,5 +30,7 @@ python -m pytest -v
 ---
 
 ### Версии проекта
-* Homework 2 (actual) | https://github.com/BondusS/HSE-backend-course
-* Homework 1 (исправленно после фидбека) | https://github.com/BondusS/HSE-backend-course/tree/91a403b70060c3b558d928eea4490813e30661c7
+* Homework 2 (исправленно после фидбека) | 
+https://github.com/BondusS/HSE-backend-course/tree/30c146bbe25e6ae22db270c1deb570400e0c5af9
+* Homework 1 (исправленно после фидбека) | 
+https://github.com/BondusS/HSE-backend-course/tree/91a403b70060c3b558d928eea4490813e30661c7
