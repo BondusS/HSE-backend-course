@@ -1,0 +1,28 @@
+# Git
+.git
+.gitignore
+
+# Docker
+Dockerfile
+.dockerignore
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.env
+.pytest_cache/
+.venv/
+venv/
+
+# IDE
+.idea/
+*.iml
+
+# Other
+mlruns/
+mlflow.db
+run_migrations.py
+alembic/
+alembic.ini

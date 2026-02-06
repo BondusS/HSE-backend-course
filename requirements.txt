@@ -1,9 +1,13 @@
-fastapi
-uvicorn
+fastapi==0.109.2
+uvicorn==0.30.1
 pydantic
-scikit-learn
+scikit-learn==1.4.0
 numpy
 pytest
 httpx
 mlflow
 sqlalchemy
+asyncpg==0.29.0
+alembic==1.13.1
+pytest-asyncio
+python-multipart
