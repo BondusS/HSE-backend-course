@@ -37,9 +37,10 @@ docker run --rm --network=my-network -v "${pwd}:/app" -w /app python:3.12-slim s
 ```bash
 docker build -t hse-backend-app .
 ```
-Запуск серера в сети с базой данных
+
+Запуск сервера в сети с базой данных
 ```bash
-docker run --rm --name backend-app-container --network=my-network -p 8000:8000 backend-app
+docker run --rm --name backend-app-container --network=my-network -p 8000:8000 -e DATABASE_URL=postgresql://postgres:paSSw0rd@postgres-bd:5432/postgres backend-app
 ```
 ### Запуск сервера MlFlow
 С другого терминала в этой же директории:
@@ -53,7 +54,7 @@ python -m pytest -v
 ```
 ### Работоспособность серверов
 * FastAPI | http://127.0.0.1:8000/docs#/
-* MlFlow | http://127.0.0.1:5000/#/
+* MlFlow | http://127.0.0.1:5000/
 
 ---
 
