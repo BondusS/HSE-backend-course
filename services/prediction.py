@@ -1,14 +1,19 @@
 import numpy as np
 from models.schemas import Item
+from repositories.items import ItemRepository
 
+class ItemNotFoundError(Exception):
+    """Кастомное исключение для случаев, когда объявление не найдено в базе данных."""
+    pass
 
 class PredictionService:
     def __init__(self, model):
         self.model = model
 
     def predict(self, item: Item) -> dict:
+        """Синхронный метод, выполняющий только расчеты по данным модели."""
         if self.model is None:
-            raise RuntimeError("Model is not loaded")
+            raise RuntimeError("Модель не загружена")
 
         # Преобразование признаков
         feat_verified = 1.0 if item.is_verified_seller else 0.0
@@ -16,12 +21,9 @@ class PredictionService:
         feat_desc_len = len(item.description) / 1000.0
         feat_category = item.category / 100.0
 
-        # Формируем вектор признаков (порядок важен и должен совпадать с обучением в model.py)
-        # [is_verified_seller, images_qty, description_length, category]
         features = np.array([[feat_verified, feat_images, feat_desc_len, feat_category]])
 
         try:
-            # Предсказание класса (0 или 1)
             prediction = self.model.predict(features)[0]
             proba = self.model.predict_proba(features)[0][1]
 
@@ -30,5 +32,20 @@ class PredictionService:
                 "probability": float(proba)
             }
         except Exception as e:
-            # Пробрасываем ошибку выше, чтобы main.py её поймал
             raise e
+
+    async def simple_predict(self, item_id: int, item_repository: ItemRepository) -> dict:
+        """
+        Оркестрирует получение данных и предсказание.
+        1. Получает данные из репозитория.
+        2. Вызывает основной метод predict.
+        """
+        # Получаем данные объявления из БД
+        item_data = await item_repository.get_item_with_seller_info(item_id)
+
+        # Если объявление не найдено, выбрасываем кастомное исключение
+        if item_data is None:
+            raise ItemNotFoundError(f"Объявление с id {item_id} не найдено.")
+        
+        # Выполняем предсказание, используя основной синхронный метод
+        return self.predict(item_data)

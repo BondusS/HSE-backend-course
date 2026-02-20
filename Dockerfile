@@ -11,7 +11,14 @@ COPY requirements.txt .
 # --no-cache-dir чтобы не хранить кэш и уменьшить размер образа
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Копируем весь код проекта в рабочую директорию
+# Копируем alembic.ini и директорию с миграциями
+COPY alembic.ini .
+COPY alembic ./alembic
+
+# Копируем скрипт ожидания БД
+COPY tests/wait-for-db.py .
+
+# Копируем остальной код проекта в рабочую директорию
 COPY . .
 
 # Указываем команду для запуска приложения

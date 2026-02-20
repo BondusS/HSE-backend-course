@@ -36,3 +36,20 @@ class ItemRepository:
                     is_verified_seller=row['is_verified_seller']
                 )
             return None
+
+    async def create_item(
+        self, name: str, description: str, category: int, images_qty: int, seller_id: int
+    ) -> int:
+        """
+        Создает новое объявление и возвращает его ID.
+        """
+        query = """
+            INSERT INTO items (name, description, category, images_qty, seller_id)
+            VALUES ($1, $2, $3, $4, $5)
+            RETURNING id;
+        """
+        async with self.pool.acquire() as conn:
+            item_id = await conn.fetchval(
+                query, name, description, category, images_qty, seller_id
+            )
+            return item_id

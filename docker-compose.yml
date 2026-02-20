@@ -1,0 +1,34 @@
+services:
+  postgres-db:
+    image: postgres:16-alpine
+    container_name: hse_postgres_db
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=paSSw0rd
+      - POSTGRES_DB=postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+    networks:
+      - hse_network
+
+  backend-app:
+    build: .
+    container_name: hse_backend_app
+    command: ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+    depends_on:
+      - postgres-db
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://postgres:paSSw0rd@postgres-db:5432/postgres
+    networks:
+      - hse_network
+
+volumes:
+  postgres_data:
+
+networks:
+  hse_network:
+    driver: bridge

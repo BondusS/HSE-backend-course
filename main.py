@@ -10,7 +10,9 @@ from fastapi.responses import JSONResponse
 from services.prediction import PredictionService
 from model import get_model
 from routes.predictions import router as predictions_router
+from routes.management import router as management_router
 from repositories.items import ItemRepository
+from repositories.users import UserRepository
 
 # Решение для известной проблемы с asyncio и Docker в Windows
 if sys.platform == "win32":
@@ -24,15 +26,15 @@ logging.basicConfig(
 logger = logging.getLogger("moderation_service")
 
 # Получаем строку подключения из переменной окружения.
-# Если она не задана, используем значение по умолчанию для запуска в Docker.
+# Имя хоста 'postgres-db' соответствует имени сервиса в docker-compose.yml.
 DATABASE_URL = os.getenv(
     "DATABASE_URL", 
-    "postgresql://postgres:paSSw0rd@postgres-bd:5432/postgres"
+    "postgresql://postgres:paSSw0rd@postgres-db:5432/postgres"
 )
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # --- Код при старте приложения ---
+    # Код при старте приложения
     logger.info(f"Подключаемся к базе данных по адресу: {DATABASE_URL.split('@')[-1]}")
     try:
         pool = await asyncpg.create_pool(DATABASE_URL)
@@ -41,11 +43,11 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.error(f"Не удалось создать пул соединений с базой данных: {e}")
         app.state.pool = None
-        # Если БД недоступна, нет смысла продолжать
         raise
 
-    # Инициализируем репозиторий
+    # Инициализируем репозитории
     app.state.item_repository = ItemRepository(app.state.pool)
+    app.state.user_repository = UserRepository(app.state.pool)
 
     # Загрузка ML-модели
     try:
@@ -58,7 +60,7 @@ async def lifespan(app: FastAPI):
     
     yield
 
-    # --- Код при выключении приложения ---
+    # Код при выключении приложения
     if app.state.pool:
         await app.state.pool.close()
         logger.info("Пул соединений с базой данных закрыт.")
@@ -69,8 +71,9 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
-# Подключение роутера
+# Подключение роутеров
 app.include_router(predictions_router)
+app.include_router(management_router)
 
 
 # Обработчики ошибок

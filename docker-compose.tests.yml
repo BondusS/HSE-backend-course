@@ -1,0 +1,34 @@
+version: '3.8'
+
+services:
+  postgres-db:
+    image: postgres:16-alpine
+    container_name: hse_postgres_db_test
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=paSSw0rd
+      - POSTGRES_DB=postgres
+    networks:
+      - hse_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 3s
+      timeout: 5s
+      retries: 5
+
+  backend-tests:
+    build: .
+    container_name: hse_tests_runner
+    # Прямой вызов pytest. Запускаем только интеграционные тесты.
+    command: ["python", "-m", "pytest", "-v", "-m", "integration"]
+    depends_on:
+      postgres-db:
+        condition: service_healthy
+    environment:
+      - DATABASE_URL=postgresql://postgres:paSSw0rd@postgres-db:5432/postgres
+    networks:
+      - hse_network
+
+networks:
+  hse_network:
+    driver: bridge

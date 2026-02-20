@@ -24,5 +24,3 @@ venv/
 mlruns/
 mlflow.db
 run_migrations.py
-alembic/
-alembic.ini

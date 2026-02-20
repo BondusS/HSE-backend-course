@@ -9,48 +9,29 @@ pip install -r requirements.txt
 ```bash
 set USE_MLFLOW=true
 ```
-### Поднимаем базу данных Postgres
+### Запуск сервера FastAPI и базы данных Postgres в сети Docker Compose
 ```bash
-docker run --name postgres-bd -e POSTGRES_PASSWORD=paSSw0rd -p 5432:5432 -d postgres
-```
-Проверяем что контейнер запустился и работает
-```bash
-docker ps -a
-```
-### Делаем миграцию
-Создаём сеть
-```bash
-docker network create my-network
-```
-Подключаем контейнер с базой данных Postgres к сети
-```bash
-docker network connect my-network postgres-bd
-```
-Делаем миграцию
-```bash
-docker run --rm --network=my-network -v "${pwd}:/app" -w /app python:3.12-slim sh -c "pip install alembic asyncpg sqlalchemy && alembic upgrade head" 
-```
-### Запуск сервера FastAPI
-С другого терминала в этой же директории:
-
-Оборачиваем приложене в контейнер, для взаимодействия с базой данных Postgres в сети
-```bash
-docker build -t hse-backend-app .
-```
-
-Запуск сервера в сети с базой данных
-```bash
-docker run --rm --name backend-app-container --network=my-network -p 8000:8000 -e DATABASE_URL=postgresql://postgres:paSSw0rd@postgres-bd:5432/postgres backend-app
+docker-compose up --build
 ```
 ### Запуск сервера MlFlow
 С другого терминала в этой же директории:
 ```bash
 mlflow ui --backend-store-uri sqlite:///mlflow.db
 ```
+### Запуск миграции
+```bash
+docker-compose build backend-app
+```
+```bash
+docker-compose run --rm backend-app alembic upgrade head
+```
 ### Тесты
 С другого терминала в этой же директории:
 ```bash
-python -m pytest -v
+docker-compose -f docker-compose.tests.yml build backend-tests 
+```
+```bash
+docker-compose -f docker-compose.tests.yml up --build --abort-on-container-exit 
 ```
 ### Работоспособность серверов
 * FastAPI | http://127.0.0.1:8000/docs#/
