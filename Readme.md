@@ -9,7 +9,7 @@ pip install -r requirements.txt
 ```bash
 set USE_MLFLOW=true
 ```
-### Запуск сервера FastAPI и базы данных Postgres в сети Docker Compose
+### Запуск сервера FastAPI, базы данных Postgres и брокера Redpanda в сети Docker Compose
 ```bash
 docker-compose up --build
 ```
@@ -36,6 +36,7 @@ docker-compose -f docker-compose.tests.yml up --build --abort-on-container-exit
 ### Работоспособность серверов
 * FastAPI | http://127.0.0.1:8000/docs#/
 * MlFlow | http://127.0.0.1:5000/
+* Redpanda | http://127.0.0.1:8080/
 
 ---
 

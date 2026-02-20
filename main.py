@@ -13,6 +13,8 @@ from routes.predictions import router as predictions_router
 from routes.management import router as management_router
 from repositories.items import ItemRepository
 from repositories.users import UserRepository
+from repositories.moderation_results import ModerationResultRepository
+from app.clients.kafka import KafkaProducerClient # Импортируем Kafka Producer
 
 # Решение для известной проблемы с asyncio и Docker в Windows
 if sys.platform == "win32":
@@ -32,9 +34,15 @@ DATABASE_URL = os.getenv(
     "postgresql://postgres:paSSw0rd@postgres-db:5432/postgres"
 )
 
+# Получаем адрес Kafka брокера из переменной окружения
+KAFKA_BOOTSTRAP_SERVERS = os.getenv(
+    "KAFKA_BOOTSTRAP_SERVERS",
+    "redpanda:29092" # Имя сервиса Redpanda в Docker Compose
+)
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Код при старте приложения
+    # --- Код при старте приложения ---
     logger.info(f"Подключаемся к базе данных по адресу: {DATABASE_URL.split('@')[-1]}")
     try:
         pool = await asyncpg.create_pool(DATABASE_URL)
@@ -48,6 +56,16 @@ async def lifespan(app: FastAPI):
     # Инициализируем репозитории
     app.state.item_repository = ItemRepository(app.state.pool)
     app.state.user_repository = UserRepository(app.state.pool)
+    app.state.moderation_result_repository = ModerationResultRepository(app.state.pool) # Новый репозиторий
+
+    # Инициализируем и запускаем Kafka Producer
+    app.state.kafka_producer = KafkaProducerClient(KAFKA_BOOTSTRAP_SERVERS)
+    try:
+        await app.state.kafka_producer.start()
+    except Exception as e:
+        logger.error(f"Не удалось запустить Kafka Producer: {e}")
+        app.state.kafka_producer = None
+        raise
 
     # Загрузка ML-модели
     try:
@@ -60,10 +78,13 @@ async def lifespan(app: FastAPI):
     
     yield
 
-    # Код при выключении приложения
+    # --- Код при выключении приложения ---
     if app.state.pool:
         await app.state.pool.close()
         logger.info("Пул соединений с базой данных закрыт.")
+    
+    if app.state.kafka_producer:
+        await app.state.kafka_producer.stop()
     
     app.state.prediction_service = None
     logger.info("Сервис выключается.")
