@@ -19,6 +19,7 @@ docker-compose up --build
 mlflow ui --backend-store-uri sqlite:///mlflow.db
 ```
 ### Запуск миграции
+С другого терминала в этой же директории:
 ```bash
 docker-compose build backend-app
 ```
@@ -26,7 +27,6 @@ docker-compose build backend-app
 docker-compose run --rm backend-app alembic upgrade head
 ```
 ### Тесты
-С другого терминала в этой же директории:
 ```bash
 docker-compose -f docker-compose.tests.yml build backend-tests 
 ```
