@@ -41,6 +41,7 @@ docker-compose -f docker-compose.tests.yml up --build --abort-on-container-exit
 ---
 
 ## Версии проекта
+* Homework 4 (актуальная версия) | https://github.com/BondusS/HSE-backend-course
 * Homework 3 (исправленно после фидбека) | 
 https://github.com/BondusS/HSE-backend-course/tree/fefab2d0a4174bbd06ea2aa184b332f961500372
 * Homework 2 (исправленно после фидбека) | 
