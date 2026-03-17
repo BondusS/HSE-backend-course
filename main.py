@@ -14,6 +14,7 @@ from routes.management import router as management_router
 from repositories.items import ItemRepository
 from repositories.users import UserRepository
 from repositories.moderation_results import ModerationResultRepository
+from repositories.redis_repository import RedisRepository
 from app.clients.kafka import KafkaProducerClient # Импортируем Kafka Producer
 
 # Решение для известной проблемы с asyncio и Docker в Windows
@@ -40,6 +41,9 @@ KAFKA_BOOTSTRAP_SERVERS = os.getenv(
     "redpanda:29092" # Имя сервиса Redpanda в Docker Compose
 )
 
+REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
+REDIS_PORT = int(os.getenv("REDIS_PORT", 6379))
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # --- Код при старте приложения ---
@@ -57,6 +61,7 @@ async def lifespan(app: FastAPI):
     app.state.item_repository = ItemRepository(app.state.pool)
     app.state.user_repository = UserRepository(app.state.pool)
     app.state.moderation_result_repository = ModerationResultRepository(app.state.pool) # Новый репозиторий
+    app.state.redis_repository = RedisRepository(host=REDIS_HOST, port=REDIS_PORT)
 
     # Инициализируем и запускаем Kafka Producer
     app.state.kafka_producer = KafkaProducerClient(KAFKA_BOOTSTRAP_SERVERS)
@@ -78,7 +83,7 @@ async def lifespan(app: FastAPI):
     
     yield
 
-    # --- Код при выключении приложения ---
+    # Код при выключении приложения
     if app.state.pool:
         await app.state.pool.close()
         logger.info("Пул соединений с базой данных закрыт.")

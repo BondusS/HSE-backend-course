@@ -1,5 +1,5 @@
 import logging
-from fastapi import APIRouter, HTTPException, Request, status
+from fastapi import APIRouter, HTTPException, Request, status, Query
 from pydantic import BaseModel, Field
 
 logger = logging.getLogger("moderation_service.routes.management")
@@ -51,10 +51,46 @@ async def create_item(item_data: ItemCreate, request: Request):
         logger.info(f"Создано новое объявление с ID: {item_id}")
         return {"id": item_id, **item_data.model_dump()}
     except Exception as e:
-        # Обработка случая, если seller_id не существует (foreign key violation)
         if "violates foreign key constraint" in str(e):
             logger.warning(f"Попытка создать объявление с несуществующим seller_id: {item_data.seller_id}")
             raise HTTPException(status_code=404, detail=f"Пользователь с ID {item_data.seller_id} не найден.")
         
         logger.error(f"Не удалось создать объявление: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Ошибка при создании объявления.")
+
+@router.post("/close", status_code=status.HTTP_200_OK)
+async def close_item(
+    request: Request,
+    item_id: int = Query(..., gt=0, description="ID объявления для закрытия.")
+):
+    """
+    Закрывает объявление и удаляет связанные с ним кэшированные предсказания.
+    """
+    logger.info(f"Получен запрос на закрытие объявления с ID: {item_id}")
+
+    item_repo = request.app.state.item_repository
+    redis_repo = request.app.state.redis_repository
+
+    # 1. Помечаем объявление как закрытое в PostgreSQL
+    closed_item_id = await item_repo.close_item(item_id)
+    if not closed_item_id:
+        logger.warning(f"Объявление с ID {item_id} не найдено для закрытия.")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Объявление с ID {item_id} не найдено."
+        )
+
+    logger.info(f"Объявление с ID {item_id} помечено как закрытое в PostgreSQL.")
+
+    # 2. Удаляем кэш предсказаний из Redis
+    prediction_cache_key = f"prediction:{item_id}"
+    await redis_repo.delete(prediction_cache_key)
+    logger.info(f"Кэш предсказаний для item_id={item_id} удален из Redis.")
+
+    # 3. Находим и удаляем все связанные результаты модерации из кэша
+    # Это более сложная операция, так как мы не знаем task_id напрямую.
+    # В данном случае, мы оставим эту логику для улучшения в будущем,
+    # так как для этого потребуется изменение структуры хранения кэша.
+    # Пока что, удаляем только кэш предсказаний.
+
+    return {"message": f"Объявление {item_id} успешно закрыто."}

@@ -9,7 +9,7 @@ pip install -r requirements.txt
 ```bash
 set USE_MLFLOW=true
 ```
-### Запуск сервера FastAPI, базы данных Postgres и брокера Redpanda в сети Docker Compose
+### Запуск сервера FastAPI, базы данных Postgres, Redis и брокера Redpanda в сети Docker Compose
 ```bash
 docker-compose up --build
 ```
@@ -27,11 +27,17 @@ docker-compose build backend-app
 docker-compose run --rm backend-app alembic upgrade head
 ```
 ### Тесты
+Для запуска всех тестов:
 ```bash
-docker-compose -f docker-compose.tests.yml build backend-tests 
+docker-compose -f docker-compose.tests.yml up --build --abort-on-container-exit
 ```
+Для запуска только интеграционных тестов:
 ```bash
-docker-compose -f docker-compose.tests.yml up --build --abort-on-container-exit 
+docker-compose -f docker-compose.tests.yml run --rm backend-tests pytest -m integration
+```
+Для запуска только юнит-тестов:
+```bash
+docker-compose -f docker-compose.tests.yml run --rm backend-tests pytest -m "not integration"
 ```
 ### Работоспособность серверов
 * FastAPI | http://127.0.0.1:8000/docs#/

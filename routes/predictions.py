@@ -51,11 +51,22 @@ async def simple_predict(
 ):
     """
     Делает предсказание только по ID объявления, делегируя логику сервисному слою.
+    Сначала проверяет кэш Redis, и если результат найден, возвращает его.
+    В противном случае, выполняет предсказание и сохраняет результат в кэш.
     """
     logger.info(f"Получен запрос simple_predict для item_id: {item_id}")
 
     prediction_service = request.app.state.prediction_service
     item_repository = request.app.state.item_repository
+    redis_repository = request.app.state.redis_repository
+
+    cache_key = f"prediction:{item_id}"
+    cached_result = await redis_repository.get(cache_key)
+    if cached_result:
+        logger.info(f"Результат для item_id {item_id} найден в кэше.")
+        return PredictionResponse(**cached_result)
+
+    logger.info(f"Результат для item_id {item_id} не найден в кэше, выполняем предсказание.")
 
     if not prediction_service or prediction_service.model is None:
         logger.error("Модель недоступна для simple_predict.")
@@ -67,6 +78,10 @@ async def simple_predict(
     try:
         result = await prediction_service.simple_predict(item_id, item_repository)
         logger.info(f"Simple prediction result for item_id {item_id}: {result}")
+
+        await redis_repository.set(cache_key, result.dict(), ttl=3600)
+        logger.info(f"Результат для item_id {item_id} сохранен в кэш.")
+
         return result
     except ItemNotFoundError as e:
         logger.warning(str(e))
@@ -75,7 +90,6 @@ async def simple_predict(
             detail=str(e)
         )
     except Exception as e:
-        # Обработка других неожиданных ошибок из сервисного слоя
         logger.error(f"An unexpected error occurred in simple_predict service: {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -98,7 +112,6 @@ async def async_predict(
     moderation_repo = request.app.state.moderation_result_repository
     kafka_producer = request.app.state.kafka_producer
 
-    # 1. Проверяем, что объявление существует
     item_exists = await item_repository.get_item_with_seller_info(item_id)
     if not item_exists:
         logger.warning(f"Объявление с id {item_id} не найдено для асинхронной модерации.")
@@ -107,17 +120,14 @@ async def async_predict(
             detail=f"Объявление с id {item_id} не найдено."
         )
 
-    # 2. Создаем запись в moderation_results со статусом pending
     task_id = await moderation_repo.create_pending_result(item_id)
     logger.info(f"Создана задача модерации task_id={task_id} для item_id={item_id}.")
 
-    # 3. Отправляем сообщение в Kafka-топик moderation
     try:
         await kafka_producer.send_moderation_request(item_id=item_id, task_id=task_id, topic="moderation")
         logger.info(f"Сообщение о модерации для task_id={task_id} отправлено в Kafka.")
     except Exception as e:
         logger.error(f"Не удалось отправить сообщение в Kafka для task_id={task_id}: {e}", exc_info=True)
-        # Если не удалось отправить в Kafka, помечаем задачу как failed
         await moderation_repo.update_result(task_id, "failed", error_message=f"Ошибка Kafka: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -135,10 +145,22 @@ async def async_predict(
 async def get_moderation_result(task_id: int, request: Request):
     """
     Получает текущий статус и результат модерации по task_id.
+    Сначала проверяет кэш, и если результат найден, возвращает его.
+    В противном случае, запрашивает результат из БД. Если результат финальный
+    (не 'pending'), он сохраняется в кэш.
     """
     logger.info(f"Получен запрос статуса модерации для task_id: {task_id}")
 
     moderation_repo = request.app.state.moderation_result_repository
+    redis_repository = request.app.state.redis_repository
+
+    cache_key = f"moderation_result:{task_id}"
+    cached_result = await redis_repository.get(cache_key)
+    if cached_result:
+        logger.info(f"Результат для task_id={task_id} найден в кэше.")
+        return ModerationStatusResponse(**cached_result)
+
+    logger.info(f"Результат для task_id={task_id} не найден в кэше, запрашиваем из БД.")
 
     result = await moderation_repo.get_result_by_id(task_id)
 
@@ -149,4 +171,8 @@ async def get_moderation_result(task_id: int, request: Request):
             detail=f"Задача модерации с task_id={task_id} не найдена."
         )
     
+    if result.get("status") != "pending":
+        logger.info(f"Результат для task_id={task_id} является финальным, кэшируем его.")
+        await redis_repository.set(cache_key, dict(result), ttl=3600)
+
     return ModerationStatusResponse(**result)

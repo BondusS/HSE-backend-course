@@ -20,12 +20,11 @@ class ItemRepository:
                 u.is_verified_seller
             FROM items i
             JOIN users u ON i.seller_id = u.id
-            WHERE i.id = $1;
+            WHERE i.id = $1 AND i.is_closed = FALSE;
         """
         async with self.pool.acquire() as conn:
             row = await conn.fetchrow(query, item_id)
             if row:
-                # Вручную создаем Pydantic-модель Item из полученных данных
                 return Item(
                     item_id=row['item_id'],
                     name=row['name'],
@@ -53,3 +52,17 @@ class ItemRepository:
                 query, name, description, category, images_qty, seller_id
             )
             return item_id
+
+    async def close_item(self, item_id: int) -> int | None:
+        """
+        Помечает объявление как закрытое.
+        """
+        query = """
+            UPDATE items
+            SET is_closed = TRUE
+            WHERE id = $1 AND is_closed = FALSE
+            RETURNING id;
+        """
+        async with self.pool.acquire() as conn:
+            closed_item_id = await conn.fetchval(query, item_id)
+            return closed_item_id

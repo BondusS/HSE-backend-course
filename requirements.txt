@@ -13,3 +13,4 @@ alembic==1.13.1
 pytest-asyncio
 python-multipart
 aiokafka
+redis
