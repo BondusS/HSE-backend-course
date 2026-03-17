@@ -93,7 +93,8 @@ pytest -m "not integration"
 ---
 
 ## Версии проекта
-* Homework 5 (актуальная версия) | https://github.com/BondusS/HSE-backend-course
+* Homework 6 (актуальная версия) | https://github.com/BondusS/HSE-backend-course
+* Homework 5 (версия без ревью) | https://github.com/BondusS/HSE-backend-course/tree/fce182f4ac0f4a277c1f11d147b135d1c4893576
 * Homework 4 (с корректировками после ревью) | https://github.com/BondusS/HSE-backend-course/tree/c031f4633af9dc81bcd1516f9a94542ba6a89fda
 * Homework 3 (исправленно после фидбека) | https://github.com/BondusS/HSE-backend-course/tree/fefab2d0a4174bbd06ea2aa184b332f961500372
 * Homework 2 (исправленно после фидбека) | https://github.com/BondusS/HSE-backend-course/tree/30c146bbe25e6ae22db270c1deb570400e0c5af9
