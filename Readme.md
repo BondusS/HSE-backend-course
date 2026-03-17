@@ -47,7 +47,10 @@ docker-compose -f docker-compose.tests.yml run --rm backend-tests pytest -m "not
 ---
 
 ## Версии проекта
-* Homework 4 (актуальная версия) | https://github.com/BondusS/HSE-backend-course
+* Homework 5 (актуальная версия) | 
+https://github.com/BondusS/HSE-backend-course
+* Homework 4 (с корректировками после ревью) | 
+https://github.com/BondusS/HSE-backend-course/tree/c031f4633af9dc81bcd1516f9a94542ba6a89fda
 * Homework 3 (исправленно после фидбека) | 
 https://github.com/BondusS/HSE-backend-course/tree/fefab2d0a4174bbd06ea2aa184b332f961500372
 * Homework 2 (исправленно после фидбека) | 
