@@ -6,6 +6,7 @@ from contextlib import asynccontextmanager
 import asyncpg
 from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse
+from prometheus_fastapi_instrumentator import Instrumentator
 
 from services.prediction import PredictionService
 from model import get_model
@@ -96,6 +97,8 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(lifespan=lifespan)
+
+Instrumentator().instrument(app).expose(app)
 
 # Подключение роутеров
 app.include_router(predictions_router)

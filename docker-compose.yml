@@ -80,6 +80,28 @@ services:
     networks:
       - hse_network
 
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: hse_prometheus
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
+    networks:
+      - hse_network
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: hse_grafana
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+    networks:
+      - hse_network
+
 volumes:
   postgres_data:
 

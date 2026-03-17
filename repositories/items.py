@@ -1,5 +1,7 @@
+import time
 from asyncpg.pool import Pool
 from models.schemas import Item
+from app.metrics import DB_QUERY_DURATION
 
 class ItemRepository:
     def __init__(self, pool: Pool):
@@ -22,19 +24,23 @@ class ItemRepository:
             JOIN users u ON i.seller_id = u.id
             WHERE i.id = $1 AND i.is_closed = FALSE;
         """
+        start_time = time.time()
         async with self.pool.acquire() as conn:
             row = await conn.fetchrow(query, item_id)
-            if row:
-                return Item(
-                    item_id=row['item_id'],
-                    name=row['name'],
-                    description=row['description'],
-                    category=row['category'],
-                    images_qty=row['images_qty'],
-                    seller_id=row['seller_id'],
-                    is_verified_seller=row['is_verified_seller']
-                )
-            return None
+        end_time = time.time()
+        DB_QUERY_DURATION.labels(query_type="select").observe(end_time - start_time)
+        
+        if row:
+            return Item(
+                item_id=row['item_id'],
+                name=row['name'],
+                description=row['description'],
+                category=row['category'],
+                images_qty=row['images_qty'],
+                seller_id=row['seller_id'],
+                is_verified_seller=row['is_verified_seller']
+            )
+        return None
 
     async def create_item(
         self, name: str, description: str, category: int, images_qty: int, seller_id: int
@@ -47,11 +53,14 @@ class ItemRepository:
             VALUES ($1, $2, $3, $4, $5)
             RETURNING id;
         """
+        start_time = time.time()
         async with self.pool.acquire() as conn:
             item_id = await conn.fetchval(
                 query, name, description, category, images_qty, seller_id
             )
-            return item_id
+        end_time = time.time()
+        DB_QUERY_DURATION.labels(query_type="insert").observe(end_time - start_time)
+        return item_id
 
     async def close_item(self, item_id: int) -> int | None:
         """
@@ -63,6 +72,9 @@ class ItemRepository:
             WHERE id = $1 AND is_closed = FALSE
             RETURNING id;
         """
+        start_time = time.time()
         async with self.pool.acquire() as conn:
             closed_item_id = await conn.fetchval(query, item_id)
-            return closed_item_id
+        end_time = time.time()
+        DB_QUERY_DURATION.labels(query_type="update").observe(end_time - start_time)
+        return closed_item_id

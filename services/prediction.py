@@ -1,6 +1,8 @@
 import numpy as np
+import time
 from models.schemas import Item
 from repositories.items import ItemRepository
+from app.metrics import PREDICTIONS_TOTAL, PREDICTION_DURATION, PREDICTION_ERRORS_TOTAL, MODEL_PREDICTION_PROBABILITY
 
 class ItemNotFoundError(Exception):
     """Кастомное исключение для случаев, когда объявление не найдено в базе данных."""
@@ -13,6 +15,7 @@ class PredictionService:
     def predict(self, item: Item) -> dict:
         """Синхронный метод, выполняющий только расчеты по данным модели."""
         if self.model is None:
+            PREDICTION_ERRORS_TOTAL.labels(error_type="model_unavailable").inc()
             raise RuntimeError("Модель не загружена")
 
         # Преобразование признаков
@@ -24,14 +27,23 @@ class PredictionService:
         features = np.array([[feat_verified, feat_images, feat_desc_len, feat_category]])
 
         try:
+            start_time = time.time()
             prediction = self.model.predict(features)[0]
             proba = self.model.predict_proba(features)[0][1]
+            end_time = time.time()
+
+            PREDICTION_DURATION.observe(end_time - start_time)
+            MODEL_PREDICTION_PROBABILITY.observe(proba)
+
+            result = "violation" if prediction == 1 else "no_violation"
+            PREDICTIONS_TOTAL.labels(result=result).inc()
 
             return {
                 "is_violation": bool(prediction == 1),
                 "probability": float(proba)
             }
         except Exception as e:
+            PREDICTION_ERRORS_TOTAL.labels(error_type="prediction_error").inc()
             raise e
 
     async def simple_predict(self, item_id: int, item_repository: ItemRepository) -> dict:
