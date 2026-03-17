@@ -2,16 +2,16 @@ version: '3.8'
 
 services:
   postgres-db:
-    image: postgres:16-alpine
+    image: postgres:16
     container_name: hse_postgres_db
     environment:
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=paSSw0rd
-      - POSTGRES_DB=postgres
+      POSTGRES_DB: hw
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
     ports:
-      - "5432:5432"
+      - "5435:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data/
+      - pgdata:/var/lib/postgresql/data
     networks:
       - hse_network
 
@@ -46,7 +46,7 @@ services:
       - PLAINTEXT://redpanda:29092,OUTSIDE://localhost:9092
     ports:
       - "9092:9092"
-      - "8081:8081" # Для Admin API, если понадобится
+      - "8081:8081"
     networks:
       - hse_network
 
@@ -54,7 +54,7 @@ services:
     image: redpandadata/console:latest
     container_name: hse_redpanda_console
     environment:
-      KAFKA_BROKERS: redpanda:29092 # Имя сервиса Redpanda в Docker Compose
+      KAFKA_BROKERS: redpanda:29092
     ports:
       - "8080:8080"
     depends_on:
@@ -68,13 +68,13 @@ services:
     command: ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
     depends_on:
       - postgres-db
-      - redpanda # Приложение теперь зависит от Redpanda
+      - redpanda
       - redis
     ports:
       - "8000:8000"
     environment:
-      - DATABASE_URL=postgresql://postgres:paSSw0rd@postgres-db:5432/postgres
-      - KAFKA_BOOTSTRAP_SERVERS=redpanda:29092 # Передаем адрес Kafka в приложение
+      - DATABASE_URL=postgresql://postgres:postgres@postgres-db:5432/hw
+      - KAFKA_BOOTSTRAP_SERVERS=redpanda:29092
       - REDIS_HOST=redis
       - REDIS_PORT=6379
     networks:
@@ -103,7 +103,7 @@ services:
       - hse_network
 
 volumes:
-  postgres_data:
+  pgdata:
 
 networks:
   hse_network:

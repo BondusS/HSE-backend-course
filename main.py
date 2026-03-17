@@ -12,10 +12,12 @@ from services.prediction import PredictionService
 from model import get_model
 from routes.predictions import router as predictions_router
 from routes.management import router as management_router
+from routes.auth import router as auth_router
 from repositories.items import ItemRepository
 from repositories.users import UserRepository
 from repositories.moderation_results import ModerationResultRepository
 from repositories.redis_repository import RedisRepository
+from repositories.accounts import AccountRepository
 from app.clients.kafka import KafkaProducerClient # Импортируем Kafka Producer
 
 # Решение для известной проблемы с asyncio и Docker в Windows
@@ -33,7 +35,7 @@ logger = logging.getLogger("moderation_service")
 # Имя хоста 'postgres-db' соответствует имени сервиса в docker-compose.yml.
 DATABASE_URL = os.getenv(
     "DATABASE_URL", 
-    "postgresql://postgres:paSSw0rd@postgres-db:5432/postgres"
+    "postgresql://postgres:postgres@postgres-db:5432/hw"
 )
 
 # Получаем адрес Kafka брокера из переменной окружения
@@ -47,7 +49,7 @@ REDIS_PORT = int(os.getenv("REDIS_PORT", 6379))
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # --- Код при старте приложения ---
+    # Код при старте приложения
     logger.info(f"Подключаемся к базе данных по адресу: {DATABASE_URL.split('@')[-1]}")
     try:
         pool = await asyncpg.create_pool(DATABASE_URL)
@@ -61,8 +63,9 @@ async def lifespan(app: FastAPI):
     # Инициализируем репозитории
     app.state.item_repository = ItemRepository(app.state.pool)
     app.state.user_repository = UserRepository(app.state.pool)
-    app.state.moderation_result_repository = ModerationResultRepository(app.state.pool) # Новый репозиторий
+    app.state.moderation_result_repository = ModerationResultRepository(app.state.pool)
     app.state.redis_repository = RedisRepository(host=REDIS_HOST, port=REDIS_PORT)
+    app.state.account_repository = AccountRepository(app.state.pool)
 
     # Инициализируем и запускаем Kafka Producer
     app.state.kafka_producer = KafkaProducerClient(KAFKA_BOOTSTRAP_SERVERS)
@@ -103,6 +106,7 @@ Instrumentator().instrument(app).expose(app)
 # Подключение роутеров
 app.include_router(predictions_router)
 app.include_router(management_router)
+app.include_router(auth_router)
 
 
 # Обработчики ошибок

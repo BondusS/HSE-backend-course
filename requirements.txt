@@ -16,3 +16,4 @@ aiokafka
 redis
 prometheus-client
 prometheus-fastapi-instrumentator
+pyjwt

@@ -6,7 +6,7 @@
 ```bash
 pip install -r requirements.txt
 ```
-Установите переменную окружения:
+При необходимости работы с MLflow, установите переменную окружения:
 ```bash
 set USE_MLFLOW=true
 ```
@@ -16,6 +16,12 @@ set USE_MLFLOW=true
 ```bash
 docker-compose up --build -d
 ```
+**Конфигурация БД:**
+- **Хост:** `localhost`
+- **Порт:** `5435`
+- **Пользователь:** `postgres`
+- **Пароль:** `postgres`
+- **Имя БД:** `hw`
 
 ### 3. Применение миграций базы данных
 После запуска контейнеров, примените миграции для создания таблиц в базе данных.
@@ -23,7 +29,30 @@ docker-compose up --build -d
 docker-compose exec backend-app alembic upgrade head
 ```
 
-### 4. Тестирование
+### 4. Авторизация
+Для доступа к эндпоинтам предсказаний требуется авторизация.
+
+**Шаг 1: Создайте пользователя**
+Подразумевается, что таблица `account` заполняется извне. Для тестирования вы можете создать пользователя, запустив интеграционные тесты (`pytest -m integration`), которые создают тестовый аккаунт, или добавив запись в таблицу `account` вручную.
+
+**Шаг 2: Получите токен**
+Отправьте POST-запрос на эндпоинт `/login` с вашим логином и паролем.
+```bash
+# Замените testuser и testpassword на актуальные данные
+curl -X POST "http://localhost:8000/login" \
+-H "Content-Type: application/x-www-form-urlencoded" \
+-d "username=testuser&password=testpassword" -c cookies.txt
+```
+В ответ вы получите JWT-токен, который также будет сохранен в `HttpOnly` cookie `access_token`.
+
+**Шаг 3: Выполните запрос к защищенному эндпоинту**
+Используйте полученные cookie для аутентификации при последующих запросах.
+```bash
+# Пример запроса к защищенному эндпоинту
+curl -X POST "http://localhost:8000/simple_predict?item_id=1" -b cookies.txt
+```
+
+### 5. Тестирование
 Для запуска всех тестов:
 ```bash
 docker-compose -f docker-compose.tests.yml up --build --abort-on-container-exit
@@ -37,7 +66,7 @@ pytest -m integration
 pytest -m "not integration"
 ```
 
-### 5. Доступные сервисы
+### 6. Доступные сервисы
 * **FastAPI (документация)**: http://127.0.0.1:8000/docs
 * **FastAPI (метрики)**: http://127.0.0.1:8000/metrics
 * **Redpanda Console**: http://127.0.0.1:8080/
